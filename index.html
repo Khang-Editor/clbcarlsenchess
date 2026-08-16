@@ -1748,18 +1748,40 @@ async function sfInitWebFromCache() {
   ).href;
 
   console.log('WASM URL:', wasmUrl);
-  console.log(
-    'Loader has target:',
-    jsText.includes('w="stockfish.wasm"')
-  );
 
-  const patched = jsText.replace(
+  // Patch Emscripten's default WASM filename
+  let patched = jsText.replace(
     'w="stockfish.wasm"',
     `w="${wasmUrl}"`
   );
 
+  // Patch Stockfish's worker wrapper so its locateFile()
+  // also returns the real WASM URL.
+  const oldWrapper =
+    'a=decodeURIComponent(e[0]||location.origin+location.pathname.replace(/\\.js$/i,".wasm"))';
+
+  if (patched.includes(oldWrapper)) {
+    patched = patched.replace(
+      oldWrapper,
+      `a="${wasmUrl}"`
+    );
+    console.log('Patched Stockfish worker WASM path');
+  } else {
+    console.warn('Stockfish worker wrapper pattern not found');
+  }
+
+  console.log(
+    'Has stockfish.wasm:',
+    patched.includes('w="stockfish.wasm"')
+  );
+
+  console.log(
+    'Has WASM URL:',
+    patched.includes(wasmUrl)
+  );
+
   if (patched === jsText) {
-    throw new Error('Không tìm thấy tên WASM trong loader Stockfish.');
+    throw new Error('Không patch được loader Stockfish.');
   }
 
   if (sfWebBlobUrl) {
@@ -1767,26 +1789,42 @@ async function sfInitWebFromCache() {
   }
 
   sfWebBlobUrl = URL.createObjectURL(
-    new Blob([patched], { type: 'application/javascript' })
+    new Blob([patched], {
+      type: 'application/javascript'
+    })
   );
 
   if (sfWorker) {
-    try { sfWorker.terminate(); } catch (_) {}
+    try {
+      sfWorker.terminate();
+    } catch (_) {}
   }
 
   sfWorker = new Worker(sfWebBlobUrl);
+
+  console.log('Worker Created');
+
   sfMode = 'worker';
-  sfWorker.onmessage = (e) => sfOnMessage(e.data);
+
+  sfWorker.onmessage = (e) => {
+    sfOnMessage(e.data);
+  };
 
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error('Stockfish Web khởi động quá lâu')),
+      () => reject(
+        new Error('Stockfish Web khởi động quá lâu')
+      ),
       15000
     );
 
     sfWorker.onerror = (err) => {
       clearTimeout(timeout);
-      reject(new Error(err.message || 'Worker error'));
+      reject(
+        new Error(
+          err.message || 'Worker error'
+        )
+      );
     };
 
     sfUciOkResolve = () => {
@@ -1794,13 +1832,13 @@ async function sfInitWebFromCache() {
         clearTimeout(timeout);
         resolve();
       };
+
       sfSend('isready');
     };
 
     sfSend('uci');
   });
 }
-
 async function sfEnsureWebEngine() {
   sfWebCacheKey = getWebEngineKey();
   sfWebPlatform.textContent = `${getWebPlatform()} • ${sfWebCacheKey.split(':').pop()}`;
