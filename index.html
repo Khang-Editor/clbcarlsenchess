@@ -1751,24 +1751,21 @@ async function sfInitWebFromCache() {
 
   // Patch Emscripten's default WASM filename
   let patched = jsText.replace(
-    'w="stockfish.wasm"',
-    `w="${wasmUrl}"`
-  );
+  'w="stockfish.wasm"',
+  `w="${wasmUrl}"`
+);
 
-  // Patch Stockfish's worker wrapper so its locateFile()
-  // also returns the real WASM URL.
-  const oldWrapper =
-    'a=decodeURIComponent(e[0]||location.origin+location.pathname.replace(/\\.js$/i,".wasm"))';
+const oldWrapper =
+  'a=decodeURIComponent(e[0]||location.origin+location.pathname.replace(/\\.js$/i,".wasm"))';
 
-  if (patched.includes(oldWrapper)) {
-    patched = patched.replace(
-      oldWrapper,
-      `a="${wasmUrl}"`
-    );
-    console.log('Patched Stockfish worker WASM path');
-  } else {
-    console.warn('Stockfish worker wrapper pattern not found');
-  }
+console.log('Wrapper found:', patched.includes(oldWrapper));
+
+patched = patched.replace(
+  oldWrapper,
+  `a="${wasmUrl}"`
+);
+
+console.log('Wrapper patched:', !patched.includes(oldWrapper));
 
   console.log(
     'Has stockfish.wasm:',
