@@ -13,3 +13,18 @@ GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see https://www.gnu.org/licenses/.
+
+---
+
+Third-party software:
+
+This project includes Stockfish 18, a free and open-source chess engine.
+Stockfish is a separate third-party project and is not part of the
+original code of CLB Carlsen Chess.
+
+Stockfish remains subject to its own license and copyright notices.
+Please preserve the applicable Stockfish license and attribution when
+redistributing the Stockfish components included with this project.
+
+For more information about Stockfish, visit:
+https://stockfishchess.org/
