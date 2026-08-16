@@ -1617,8 +1617,8 @@ const sfBridgePane = document.getElementById('sfBridgePane');
 const sfFilePane = document.getElementById('sfFilePane');
 
 const WEB_ENGINE_VERSION = '18.0.8';
-const WEB_ENGINE_JS_URL = '/clbcarlsenchess/stockfish-18-lite-single.js';
-const WEB_ENGINE_WASM_URL = '/clbcarlsenchess/stockfish-18-lite-single.wasm';
+const WEB_ENGINE_JS_URL = './stockfish-18-lite-single.js';
+const WEB_ENGINE_WASM_URL = './stockfish-18-lite-single.wasm';
 const WEB_ENGINE_CACHE = 'carlsen-chess-stockfish-web-v1';
 let sfWebBlobUrl = null;
 let sfWebWasmBlobUrl = null;
@@ -1743,7 +1743,7 @@ async function sfInitWebFromCache() {
   if (sfWebWasmBlobUrl) URL.revokeObjectURL(sfWebWasmBlobUrl);
   sfWebWasmBlobUrl = URL.createObjectURL(new Blob([wasmBuffer], {type:'application/wasm'}));
   // The Stockfish loader asks for its wasm by filename. Patch that filename to the persistent blob URL.
-  const patched = jsText.replaceAll('stockfish-18-lite-single.wasm', sfWebWasmBlobUrl);
+  const patched = jsText.replaceAll('stockfish.wasm', sfWebWasmBlobUrl);
   if (patched === jsText) throw new Error('Không tìm thấy tên WASM trong loader Stockfish.');
   if (sfWebBlobUrl) URL.revokeObjectURL(sfWebBlobUrl);
   sfWebBlobUrl = URL.createObjectURL(new Blob([patched], {type:'application/javascript'}));
