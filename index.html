@@ -2246,7 +2246,8 @@ async function analyzeGame() {
     secondScores.push(c1 ? c1.score : null);
   }
 
-  /
+  // Convert every position to the mover's perspective first, then classify
+  // with an Expected-Points-style loss model instead of raw CPL buckets.
   const metrics = [];
   for (let i = 0; i < analysisState.history.length; i++) {
     const preState = stateHistory[i];
@@ -2282,13 +2283,14 @@ async function analyzeGame() {
     const preState = stateHistory[i];
     let symbol = '';
 
-    
+    // Mate delivered is its own result, not an annotation.
     if (m.statusAfter.status === 'checkmate') {
       symbols.push('');
       continue;
     }
 
-    
+    // Miss = the opponent just made a serious error and this move failed to
+    // capitalize on the now-winning opportunity.
     const prev = i > 0 ? metrics[i - 1] : null;
     const previousOpponentBlunder = !!prev && prev.epLoss >= 0.20;
     if (previousOpponentBlunder && m.beforeEP >= 0.62 && !m.wasBest && m.afterEP < 0.58) {
@@ -2297,7 +2299,8 @@ async function analyzeGame() {
       continue;
     }
 
-    
+    // Serious errors use the EP-loss thresholds from the supplied Chess.com
+    // Classification V2 article, with ordinary chess icons for the UI.
     if (m.epLoss >= 0.20) symbol = '??';
     else if (m.epLoss >= 0.10) symbol = '?';
     else if (m.epLoss >= 0.05) symbol = '?!';
@@ -2310,7 +2313,9 @@ async function analyzeGame() {
       const brilliant = !alreadyWinning && m.sacrifice && m.afterEP >= 0.50 &&
                         m.epLoss <= 0.03 && m.secondGap >= 40;
 
-      
+      // Great = critical to the result or an only/clearly-best continuation.
+      // This can include a defensive move such as Bd2, but it is never forced
+      // into Brilliant just because it was the only way to answer check.
       const turningPoint =
         (m.beforeEP < 0.40 && m.afterEP >= 0.55) ||
         (m.beforeEP < 0.55 && m.afterEP >= 0.72) ||
@@ -2323,13 +2328,14 @@ async function analyzeGame() {
       else if (m.epLoss <= 0.02) symbol = '!';
     }
 
+    // Opening-book marker is only added when no stronger annotation applies.
     if (!symbol && isBookMove(i, analysisState.history)) symbol = '📙';
     symbols.push(symbol);
   }
 
   analysisSymbols = symbols;
   moveSymbols = symbols.slice();
-  
+  // Restore the position the user was looking at. Analysis must not jump the board.
   state = prevState;
   lastMove = prevLastMove;
   renderLog();
@@ -2340,7 +2346,9 @@ async function analyzeGame() {
   hintBtn.disabled = false;
 }
 
-
+// ============================================================
+// =====================  THEME TOGGLE  =======================
+// ============================================================
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 const THEME_KEY = 'carlsenChessTheme';
 
