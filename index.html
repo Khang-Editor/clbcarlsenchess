@@ -2450,3 +2450,19 @@ function applyTheme(theme) {
   themeToggleBtn.title = light ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng';
 }
 
+let savedTheme = 'dark';
+try {
+  savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+} catch (_) {}
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+
+themeToggleBtn.addEventListener('click', () => {
+  const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
+});
+
+renderAll();
+</script>
+</body>
+</html>
