@@ -1854,10 +1854,27 @@ async function sfEnsureWebEngine() {
   return true;
 }
 
+// Guard chung: nếu đang có 1 lượt tải/khởi tạo engine chạy dở, các lượt gọi
+// sau (vd bấm tab rồi lỡ bấm luôn nút install) sẽ "join" vào promise đang chạy
+// thay vì tạo thêm 1 Worker mới song song — tránh race condition đè biến global
+// (sfWorker, sfUciOkResolve...) từng khiến việc khởi tạo bị treo tới khi hết 15s timeout.
+let sfWebLoadPromise = null;
+async function sfLoadWebEngine() {
+  if (sfWebLoadPromise) return sfWebLoadPromise;
+  sfWebLoadPromise = (async () => {
+    try {
+      await sfInstallWebEngine();
+      await sfEnsureWebEngine();
+    } finally {
+      sfWebLoadPromise = null;
+    }
+  })();
+  return sfWebLoadPromise;
+}
+
 sfWebInstallBtn.addEventListener('click', async () => {
   try {
-    await sfInstallWebEngine();
-    await sfEnsureWebEngine();
+    await sfLoadWebEngine();
   } catch (err) {
     sfSetStatus('Không tải được Stockfish Web: ' + err.message, 'err');
   }
@@ -1876,9 +1893,8 @@ sfTabFileBtn.addEventListener('click', async () => {
     const cached = await sfGetCachedAssets();
     if (!cached) {
       sfWebAdvice.innerHTML = '<strong>Đang chuẩn bị tải Stockfish Web...</strong> 2 người chơi vẫn hoạt động bình thường trong lúc tải.';
-      await sfInstallWebEngine();
     }
-    await sfEnsureWebEngine();
+    await sfLoadWebEngine();
   } catch (err) {
     sfSetStatus('Web engine chưa sẵn sàng: ' + err.message, 'err');
     sfWebAdvice.innerHTML = 'Không tải được engine. Kiểm tra mạng rồi thử lại. Bạn vẫn có thể chơi 2 người; hoặc chuyển sang Local Node.js.';
@@ -2434,19 +2450,3 @@ function applyTheme(theme) {
   themeToggleBtn.title = light ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng';
 }
 
-let savedTheme = 'dark';
-try {
-  savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
-} catch (_) {}
-applyTheme(savedTheme === 'light' ? 'light' : 'dark');
-
-themeToggleBtn.addEventListener('click', () => {
-  const next = document.body.classList.contains('light-theme') ? 'dark' : 'light';
-  applyTheme(next);
-  try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
-});
-
-renderAll();
-</script>
-</body>
-</html>
