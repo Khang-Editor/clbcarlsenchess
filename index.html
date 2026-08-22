@@ -8,13 +8,13 @@
 <style>
 @font-face {
   font-family: 'DOSVGA';
-  src: url('wfonts/PerfectDOSVGA437Win.ttf') format('truetype');
+  src: url('./PerfectDOSVGA437Win.ttf') format('truetype');
   font-display: swap;
 }
 
 @font-face {
   font-family: 'AeroMatics';
-  src: url('wfonts/AeroMaticsDisplay.ttf') format('truetype');
+  src: url('./AeroMaticsDisplay.ttf') format('truetype');
   font-display: swap;
 }
 
@@ -1027,9 +1027,6 @@ body {
 
 <script>
 
-// ============================================================
-// ========================  BGM  =============================
-// ============================================================
 const bgmAudio = document.getElementById('bgmAudio');
 const bgmToggleBtn = document.getElementById('bgmToggleBtn');
 const bgmVolume = document.getElementById('bgmVolume');
@@ -1050,7 +1047,6 @@ async function startBgmFromUserGesture() {
   try {
     if (bgmAudio.paused) await bgmAudio.play();
   } catch (_) {
-    // Browser autoplay policy may still block playback.
   }
   updateBgmButton();
 }
@@ -1074,15 +1070,11 @@ bgmVolume.addEventListener('input', () => {
 bgmAudio.addEventListener('play', updateBgmButton);
 bgmAudio.addEventListener('pause', updateBgmButton);
 
-// Start on the first user interaction so file:// pages still respect browser autoplay rules.
 const bgmFirstGesture = () => { startBgmFromUserGesture(); };
 document.addEventListener('pointerdown', bgmFirstGesture, { once: true });
 document.addEventListener('keydown', bgmFirstGesture, { once: true });
 updateBgmButton();
 
-// ============================================================
-// ===================  CHESS ENGINE (core)  ===================
-// ============================================================
 function initialBoard() {
   const back = ['R','N','B','Q','K','B','N','R'];
   const b = Array.from({length:8}, () => Array(8).fill(null));
@@ -1436,8 +1428,6 @@ function stateToPGN(state) {
     headers.push(`[FEN "${state.startFEN}"]`);
   }
   const headerText = headers.join('\n');
-  // Export analysis annotations as standard PGN NAGs.
-  // $1=!  $2=?  $3=!!  $4=??  $5=!\?  $6=?!
   const nagForSymbol = { '!!':'$3', '!':'$1', '?!':'$6', '?':'$2', '??':'$4' }; // ✦ Great has no standard PGN NAG
   let movetext = '';
   const hist = state.history;
@@ -1494,9 +1484,6 @@ function gameStatus(state) {
   return { status: 'ongoing' };
 }
 
-// ============================================================
-// =========================  UI  ============================
-// ============================================================
 let state = newGameState();
 let gameHeadState = cloneState(state);
 let stateHistory = [];
@@ -1505,10 +1492,7 @@ let selectedMoves = [];
 let lastMove = null;
 let pendingPromo = null;
 let moveSymbols = [];
-// Analysis annotations belong to the full game, not the currently reviewed position.
-// This prevents clicking back in MOVE LOG / rendering from wiping annotations.
 let analysisSymbols = [];
-// Full move list is kept separately so reviewing an earlier move never deletes the later moves.
 let gameHistory = [];
 
 const boardGrid = document.getElementById('boardGrid');
@@ -1518,18 +1502,18 @@ const promoOverlay = document.getElementById('promoOverlay');
 const promoChoices = document.getElementById('promoChoices');
 
 const PIECE_IMAGES = {
-  "bK": "icons/bK.svg",
-  "bQ": "icons/bQ.svg",
-  "bR": "icons/bR.svg",
-  "bB": "icons/bB.svg",
-  "bN": "icons/bN.svg",
-  "bP": "icons/bP.svg",
-  "wK": "icons/wK.svg",
-  "wQ": "icons/wQ.svg",
-  "wR": "icons/wR.svg",
-  "wB": "icons/wB.svg",
-  "wN": "icons/wN.svg",
-  "wP": "icons/wP.svg"
+  "bK": "./bK.svg",
+  "bQ": "./bQ.svg",
+  "bR": "./bR.svg",
+  "bB": "./bB.svg",
+  "bN": "./bN.svg",
+  "bP": "./bP.svg",
+  "wK": "./wK.svg",
+  "wQ": "./wQ.svg",
+  "wR": "./wR.svg",
+  "wB": "./wB.svg",
+  "wN": "./wN.svg",
+  "wP": "./wP.svg"
 };
 
 function pieceChar(type) { return type; } // SAN/logic still uses K Q R B N P
@@ -1538,13 +1522,9 @@ function pieceImage(color, type) {
   return PIECE_IMAGES[color + type] || '';
 }
 
-// ============================================================
-// ===================  FAIRY VARIANT MODE  ====================
-// ============================================================
 const FFISH_JS_URL = './ffish.js';
 const FFISH_WASM_URL = './ffish.wasm';
 
-// Board size per variant. Everything is 8x8 except Capablanca (10 files x 8 ranks).
 const FAIRY_VARIANT_DIMS = {
   capablanca: { w: 10, h: 8 },
   chess960:   { w: 8,  h: 8 },
@@ -1559,8 +1539,6 @@ let ffishModulePromise = null;
 function loadFfishModule() {
   if (ffishModulePromise) return ffishModulePromise;
   ffishModulePromise = new Promise((resolve, reject) => {
-    // ffish.js is a classic (non-modularized) Emscripten build: it expects a
-    // pre-existing global `Module` object with locateFile/onRuntimeInitialized.
     window.Module = {
       locateFile: (p) => (p.endsWith('.wasm') ? FFISH_WASM_URL : p),
       onRuntimeInitialized: () => resolve(window.Module),
@@ -1584,15 +1562,12 @@ const fairyState = {
 
 const fairyBoardGrid = document.getElementById('fairyBoardGrid');
 
-// row 0 = top of the board (highest rank), col 0 = file 'a' — matches how renderBoard() lays out the standard board.
 function fairySquareName(r, c, h) {
   const file = String.fromCharCode('a'.charCodeAt(0) + c);
   const rank = h - r;
   return file + rank;
 }
 
-// Standard K/Q/R/B/N/P reuse the existing hand-drawn SVGs; everything else (Archbishop,
-// Chancellor, Amazon, ...) doesn't have artwork yet, so it falls back to a plain letter glyph.
 function fairyPieceCellHTML(ch) {
   const isWhite = ch === ch.toUpperCase();
   const upper = ch.toUpperCase();
@@ -1604,8 +1579,6 @@ function fairyPieceCellHTML(ch) {
   return `<div class="${cls}">${upper}</div>`;
 }
 
-// ffish's FEN board field generalizes the standard one: same rank-by-rank / '/' layout,
-// but squares can be 2-digit empty runs (Capablanca) and pieces can be letters beyond KQRBNP.
 function fairyParseFenBoard(fen) {
   const boardField = fen.split(' ')[0];
   return boardField.split('/').map(rank => {
@@ -1634,7 +1607,6 @@ async function fairyStartVariant(variantName) {
   fairyState.mod = mod;
   fairyState.variant = variantName;
   const chess960 = variantName === 'chess960';
-  // Chess960 is standard chess rules with a shuffled back rank, not a separate ruleset.
   const engineVariantName = chess960 ? 'chess' : variantName;
   if (fairyState.board) { try { fairyState.board.delete(); } catch (e) {} }
   fairyState.board = new mod.Board(engineVariantName, '', chess960);
@@ -1712,7 +1684,6 @@ function fairySquareClick(r, c, sqName) {
 
   if (fairyState.selected) {
     const fromName = fairySquareName(fairyState.selected.r, fairyState.selected.c, h);
-    // Prefer an exact from+to match; if several legal moves share it (underpromotion choices), take the first (queen-ish default).
     const match = fairyState.selectedMoves.find(m => m.startsWith(fromName) && m.slice(fromName.length).startsWith(sqName));
     if (match) {
       board.push(match);
@@ -1884,7 +1855,6 @@ function renderLog() {
       const target = (ply === gameHistory.length) ? gameHeadState : stateHistory[ply];
       if (!target) return;
 
-      // Review only. Do NOT truncate stateHistory/gameHistory here.
       state = cloneState(target);
       lastMove = state.history.length ? state.history[state.history.length - 1].move : null;
       selected = null;
@@ -2098,8 +2068,6 @@ function slidePiece(toCell, fromCell) {
 }
 
 function commitMove(move) {
-  // If the user was reviewing an older position, making a new move creates a branch.
-  // Only then do we discard the old future, not when merely clicking the move log.
   const viewedPly = state.history.length;
   if (viewedPly < gameHistory.length) {
     stateHistory = stateHistory.slice(0, viewedPly);
@@ -2157,9 +2125,6 @@ document.getElementById('undoBtn').addEventListener('click', () => {
   renderAll();
 });
 
-// ============================================================
-// =====================  STOCKFISH  =========================
-// ============================================================
 let hintArrow = null;
 let engineThinking = false;
 
@@ -2280,7 +2245,6 @@ async function sfInstallWebEngine() {
       sfShowProgress(100, '100% • Engine đã có sẵn');
       return true;
     }
-    // JS loader is tiny; WASM is ~7.3 MB. 7.4 MB is only a UI estimate, final progress follows actual bytes.
     const estimatedTotal = 7.5 * 1024 * 1024;
     let downloaded = 0;
     const update = (n) => { downloaded += n; sfShowProgress(Math.min(99.5, downloaded / estimatedTotal * 100), `${Math.max(0, Math.round(downloaded / 1024 / 1024 * 10) / 10)} MB đã tải`); };
@@ -2328,7 +2292,6 @@ async function sfInitWebFromCache() {
 
   console.log('WASM URL:', wasmUrl);
 
-  // Patch Emscripten's default WASM filename
   let patched = jsText.replace(
   'w="stockfish.wasm"',
   `w="${wasmUrl}"`
@@ -2433,10 +2396,6 @@ async function sfEnsureWebEngine() {
   return true;
 }
 
-// Guard chung: nếu đang có 1 lượt tải/khởi tạo engine chạy dở, các lượt gọi
-// sau (vd bấm tab rồi lỡ bấm luôn nút install) sẽ "join" vào promise đang chạy
-// thay vì tạo thêm 1 Worker mới song song — tránh race condition đè biến global
-// (sfWorker, sfUciOkResolve...) từng khiến việc khởi tạo bị treo tới khi hết 15s timeout.
 let sfWebLoadPromise = null;
 async function sfLoadWebEngine() {
   if (sfWebLoadPromise) return sfWebLoadPromise;
@@ -2496,9 +2455,6 @@ const SF_LEVELS = [
   {label:'2500', elo:2500}, {label:'2600', elo:2600}, {label:'2700', elo:2700}, {label:'2900', elo:2900},
   {label:'3200', elo:3200}, {label:'BOSS (full strength, ~3600)', elo:3600, boss:true}
 ];
-// Stockfish's UCI_Elo option only goes down to 1320. Dưới mức đó, mô phỏng độ yếu
-// bằng cách thỉnh thoảng chọn ngẫu nhiên trong các nước đi hợp lệ / trong top-K nước
-// engine gợi ý, thay vì luôn chơi nước tốt nhất. Đây là xấp xỉ, không phải elo thật.
 const SF_WEAK_APPROX = {
   250:  {randomProb:0.65, poolK:8},
   400:  {randomProb:0.55, poolK:7},
@@ -2650,7 +2606,6 @@ function uciToMove(uci) {
   return moves.find(m => m.to.r === tr && m.to.c === tc && (!promo || m.promotion === promo)) || null;
 }
 
-// Manual engine file loading is intentionally disabled in public build; Web/WASM auto-install handles it.
 
 
 
@@ -2774,11 +2729,6 @@ function renderArrow() {
   arrowOverlay.appendChild(line);
 }
 
-// ============================================================
-// ===================  GAME ANALYSIS (free)  ================
-// ============================================================
-// Sách khai cuộc nhỏ gọn (SAN, các dòng phổ biến) — chỉ dùng để gắn nhãn
-// 📙 trong ~10 nước đầu nếu khớp; không phải cơ sở dữ liệu đầy đủ như lichess.
 const OPENING_BOOK = [
   'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7',
   'e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6',
@@ -2831,9 +2781,6 @@ function scoreToCP(score) {
 }
 
 function expectedPoints(cp) {
-  // Chess.com does not publish its exact rating-specific EP curve.
-  // This smooth 0..1 approximation is tuned so middlegame score changes
-  // behave much less linearly than raw centipawn-loss thresholds.
   if (cp >= 9000) return 0.999;
   if (cp <= -9000) return 0.001;
   return 0.5 + 0.5 * Math.tanh(cp / 400);
@@ -2883,9 +2830,6 @@ const analyzeBtn = document.getElementById('analyzeBtn');
 analyzeBtn.addEventListener('click', analyzeGame);
 
 async function analyzeGame() {
-  // Analysis always runs on the full game head, even if the user is reviewing
-  // an older move. MOVE LOG annotations are stored separately so review clicks
-  // cannot erase them.
   const analysisState = gameHeadState;
   if (!sfReady || engineThinking || !analysisState || analysisState.history.length === 0) return;
   analyzeBtn.disabled = true;
@@ -2898,7 +2842,6 @@ async function analyzeGame() {
 
   await sfSendAndWaitReady('setoption name UCI_LimitStrength value false');
 
-  // stateHistory[i] is the position BEFORE ply i+1.
   const fens = stateHistory.map(s => stateToFEN(s));
   fens.push(stateToFEN(analysisState));
 
@@ -2915,8 +2858,6 @@ async function analyzeGame() {
     secondScores.push(c1 ? c1.score : null);
   }
 
-  // Convert every position to the mover's perspective first, then classify
-  // with an Expected-Points-style loss model instead of raw CPL buckets.
   const metrics = [];
   for (let i = 0; i < analysisState.history.length; i++) {
     const preState = stateHistory[i];
@@ -2952,14 +2893,11 @@ async function analyzeGame() {
     const preState = stateHistory[i];
     let symbol = '';
 
-    // Mate delivered is its own result, not an annotation.
     if (m.statusAfter.status === 'checkmate') {
       symbols.push('');
       continue;
     }
 
-    // Miss = the opponent just made a serious error and this move failed to
-    // capitalize on the now-winning opportunity.
     const prev = i > 0 ? metrics[i - 1] : null;
     const previousOpponentBlunder = !!prev && prev.epLoss >= 0.20;
     if (previousOpponentBlunder && m.beforeEP >= 0.62 && !m.wasBest && m.afterEP < 0.58) {
@@ -2968,23 +2906,15 @@ async function analyzeGame() {
       continue;
     }
 
-    // Serious errors use the EP-loss thresholds from the supplied Chess.com
-    // Classification V2 article, with ordinary chess icons for the UI.
     if (m.epLoss >= 0.20) symbol = '??';
     else if (m.epLoss >= 0.10) symbol = '?';
     else if (m.epLoss >= 0.05) symbol = '?!';
     else if (m.wasBest) {
       const alreadyWinning = m.beforeEP >= 0.90;
 
-      // Brilliant = best/nearly-best + genuine piece sacrifice + the position
-      // is not already completely winning. We deliberately do NOT require a
-      // check-evasion to be non-defensive here; the sacrifice test is the key.
       const brilliant = !alreadyWinning && m.sacrifice && m.afterEP >= 0.50 &&
                         m.epLoss <= 0.03 && m.secondGap >= 40;
 
-      // Great = critical to the result or an only/clearly-best continuation.
-      // This can include a defensive move such as Bd2, but it is never forced
-      // into Brilliant just because it was the only way to answer check.
       const turningPoint =
         (m.beforeEP < 0.40 && m.afterEP >= 0.55) ||
         (m.beforeEP < 0.55 && m.afterEP >= 0.72) ||
@@ -2997,14 +2927,12 @@ async function analyzeGame() {
       else if (m.epLoss <= 0.02) symbol = '!';
     }
 
-    // Opening-book marker is only added when no stronger annotation applies.
     if (!symbol && isBookMove(i, analysisState.history)) symbol = '📙';
     symbols.push(symbol);
   }
 
   analysisSymbols = symbols;
   moveSymbols = symbols.slice();
-  // Restore the position the user was looking at. Analysis must not jump the board.
   state = prevState;
   lastMove = prevLastMove;
   renderLog();
@@ -3015,9 +2943,6 @@ async function analyzeGame() {
   hintBtn.disabled = false;
 }
 
-// ============================================================
-// =====================  THEME TOGGLE  =======================
-// ============================================================
 const themeButtons = {
   dark: document.getElementById('themeDarkBtn'),
   light: document.getElementById('themeLightBtn'),
@@ -3071,7 +2996,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && moreDrawer.classList.contains('open')) closeDrawer();
 });
 
-// --- Engine kind toggle: Stockfish thường <-> Fairy Stockfish (variants) ---
 const engineKindSelect = document.getElementById('engineKindSelect');
 const fairyVariantRow = document.getElementById('fairyVariantRow');
 const normalEngineTabs = document.getElementById('normalEngineTabs');
